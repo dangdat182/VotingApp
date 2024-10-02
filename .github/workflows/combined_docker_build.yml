@@ -1,0 +1,65 @@
+name: Combined Build Pipeline
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'result/**'
+      - 'vote/**'
+      - 'worker/**'
+      - '.github/workflows/combined-docker-build.yml'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'result/**'
+      - 'vote/**'
+      - 'worker/**'
+      - '.github/workflows/combined-docker-build.yml'
+
+jobs:
+  build-result:
+    name: Build and Push Result Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Result image
+        run: |
+          docker build -t dexlo/result:latest ./result
+          docker push dexlo/result:latest
+
+  build-vote:
+    name: Build and Push Vote Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Vote image
+        run: |
+          docker build -t dexlo/vote:latest ./vote
+          docker push dexlo/vote:latest
+
+  build-worker:
+    name: Build and Push Worker Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Worker image
+        run: |
+          docker build -t dexlo/worker:latest ./worker
+          docker push dexlo/worker:latest
