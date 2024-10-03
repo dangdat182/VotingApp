@@ -54,3 +54,24 @@ jobs:
         run: |
           docker build -t dexlo/worker:latest ./worker
           docker push dexlo/worker:latest
+
+  sonarqube-analysis:
+    name: SonarQube Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 11 for SonarQube
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+
+      - name: SonarQube Scanner
+        run: |
+          sonar-scanner \
+          -Dsonar.projectKey=dangdat182_VotingApp \
+          -Dsonar.organization=dangdat182 \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
