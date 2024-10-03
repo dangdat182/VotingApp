@@ -61,6 +61,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      
+      - name: Install SonarScanner
+        run: npm install -g sonar-scanner
         
       - name: SonarQube Scanner
         run: |
