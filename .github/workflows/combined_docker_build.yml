@@ -55,27 +55,27 @@ jobs:
           docker build -t dexlo/worker:latest ./worker
           docker push dexlo/worker:latest
   # Nen de tu dong 
-  # sonarqube-analysis:
-  #   name: SonarQube Code Analysis
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
+  sonarqube-analysis:
+    name: SonarQube Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-  #     - name: Set up JDK 17 for SonarQube
-  #       uses: actions/setup-java@v2
-  #       with:
-  #         java-version: '17'
-  #         distribution: 'zulu'
+      - name: Set up JDK 17 for SonarQube
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'zulu'
 
-  #     - name: Install SonarScanner
-  #       run: npm install -g sonar-scanner
+      - name: Install SonarScanner
+        run: npm install -g sonar-scanner
 
-  #     - name: Run SonarScanner
-  #       run: |
-  #         sonar-scanner \
-  #         -Dsonar.projectKey=dangdat182_VotingApp \
-  #         -Dsonar.organization=dangdat182 \
-  #         -Dsonar.sources=. \
-  #         -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-  #         -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      - name: Run SonarScanner
+        run: |
+          sonar-scanner \
+          -Dsonar.projectKey=dangdat182_VotingApp \
+          -Dsonar.organization=dangdat182 \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
