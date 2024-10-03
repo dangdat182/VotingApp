@@ -61,11 +61,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      
+
+      - name: Set up JDK 17 for SonarQube
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
       - name: Install SonarScanner
         run: npm install -g sonar-scanner
-        
-      - name: SonarQube Scanner
+
+      - name: Run SonarScanner
         run: |
           sonar-scanner \
           -Dsonar.projectKey=dangdat182_VotingApp \
