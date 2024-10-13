@@ -54,7 +54,7 @@ jobs:
         run: |
           docker build -t dexlo/worker:latest ./worker
           docker push dexlo/worker:latest
-  # Nen de tu dong 
+
   sonarqube-analysis:
     name: SonarQube Code Analysis
     runs-on: ubuntu-latest
@@ -79,3 +79,184 @@ jobs:
           -Dsonar.sources=. \
           -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
           -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+  setup-aws-cli:
+    name: Set up AWS CLI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up AWS CLI
+        run: |
+          sudo apt-get install -y awscli
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set default.region us-east-1  # Set your preferred region
+
+  setup-vpc:
+    name: Set up VPC, Subnets, and Security Group
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create VPC
+        id: create-vpc
+        run: |
+          VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output text --query 'Vpc.VpcId')
+          echo "Created VPC with ID $VPC_ID"
+          echo "::set-output name=vpc_id::$VPC_ID"
+
+          # Enable DNS hostname for the VPC
+          aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-hostnames "{\"Value\":true}"
+
+      - name: Create Subnet
+        id: create-subnet
+        run: |
+          VPC_ID=${{ steps.create-vpc.outputs.vpc_id }}
+          SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --output text --query 'Subnet.SubnetId')
+          echo "Created Subnet with ID $SUBNET_ID"
+          echo "::set-output name=subnet_id::$SUBNET_ID"
+
+      - name: Create Internet Gateway
+        id: create-igw
+        run: |
+          IGW_ID=$(aws ec2 create-internet-gateway --output text --query 'InternetGateway.InternetGatewayId')
+          echo "Created Internet Gateway with ID $IGW_ID"
+          echo "::set-output name=igw_id::$IGW_ID"
+
+          # Attach Internet Gateway to the VPC
+          VPC_ID=${{ steps.create-vpc.outputs.vpc_id }}
+          aws ec2 attach-internet-gateway --internet-gateway-id $IGW_ID --vpc-id $VPC_ID
+
+      - name: Create Route Table
+        id: create-route-table
+        run: |
+          VPC_ID=${{ steps.create-vpc.outputs.vpc_id }}
+          ROUTE_TABLE_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID --output text --query 'RouteTable.RouteTableId')
+          echo "Created Route Table with ID $ROUTE_TABLE_ID"
+          echo "::set-output name=route_table_id::$ROUTE_TABLE_ID"
+
+          # Create route to the Internet
+          IGW_ID=${{ steps.create-igw.outputs.igw_id }}
+          aws ec2 create-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW_ID
+
+          # Associate route table with the subnet
+          SUBNET_ID=${{ steps.create-subnet.outputs.subnet_id }}
+          aws ec2 associate-route-table --route-table-id $ROUTE_TABLE_ID --subnet-id $SUBNET_ID
+
+      - name: Modify Subnet to Enable Auto-assign Public IP
+        run: |
+          SUBNET_ID=${{ steps.create-subnet.outputs.subnet_id }}
+          aws ec2 modify-subnet-attribute --subnet-id $SUBNET_ID --map-public-ip-on-launch
+
+      - name: Create Security Group
+        id: security-group
+        run: |
+          VPC_ID=${{ steps.create-vpc.outputs.vpc_id }}
+          SECURITY_GROUP_ID=$(aws ec2 create-security-group \
+            --group-name k8s-security-group \
+            --description "Security group for Kubernetes nodes" \
+            --vpc-id $VPC_ID \
+            --output text --query 'GroupId')
+
+          echo "Created security group with ID $SECURITY_GROUP_ID"
+
+          # Allow SSH traffic (port 22)
+          aws ec2 authorize-security-group-ingress \
+            --group-id $SECURITY_GROUP_ID \
+            --protocol tcp --port 22 --cidr 0.0.0.0/0
+
+          # Allow HTTP traffic (port 80)
+          aws ec2 authorize-security-group-ingress \
+            --group-id $SECURITY_GROUP_ID \
+            --protocol tcp --port 80 --cidr 0.0.0.0/0
+
+          # Allow HTTPS traffic (port 443)
+          aws ec2 authorize-security-group-ingress \
+            --group-id $SECURITY_GROUP_ID \
+            --protocol tcp --port 443 --cidr 0.0.0.0/0
+
+          echo "::set-output name=security_group_id::$SECURITY_GROUP_ID"
+
+  setup-ec2:
+    name: Set up EC2 Instances for Kubernetes
+    needs: setup-vpc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Launch EC2 Instances
+        run: |
+          VPC_ID=${{ steps.setup-vpc.outputs.vpc_id }}
+          SUBNET_ID=${{ steps.setup-vpc.outputs.subnet_id }}
+          SECURITY_GROUP_ID=${{ steps.setup-vpc.outputs.security_group_id }}
+
+          aws ec2 run-instances \
+            --image-id ami-005fc0f236362e99f \
+            --count 3 \
+            --instance-type t2.micro \
+            --key-name test \
+            --security-group-ids $SECURITY_GROUP_ID \
+            --subnet-id $SUBNET_ID \
+            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=k8s-node}]' \
+            --associate-public-ip-address
+
+      - name: Wait for EC2 Instances to be ready
+        run: sleep 120
+
+      - name: Get EC2 Public IPs
+        id: ec2_ips
+        run: |
+          INSTANCES=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=k8s-node" --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
+          echo "::set-output name=ips::$INSTANCES"
+
+      - name: Install Kubernetes on EC2 Instances
+        run: |
+          for ip in ${{ steps.ec2_ips.outputs.ips }}; do
+            ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_SSH_PRIVATE_KEY }} ubuntu@$ip << 'EOF'
+              set -x
+              sudo apt update && sudo apt install -y docker.io
+              sudo apt-get install -y apt-transport-https curl
+              curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+              echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+              sudo apt update
+              sudo apt-get install -y kubelet kubeadm kubectl
+              sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+              mkdir -p $HOME/.kube
+              sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+              sudo chown $(id -u):$(id -g) $HOME/.kube/config
+              kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+            EOF
+          done
+
+      - name: Install kubectl on Runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y kubectl
+
+      - name: Configure kubectl for Kubernetes Cluster
+        run: |
+          MASTER_IP=$(echo ${{ steps.ec2_ips.outputs.ips }} | awk '{print $1}')
+          scp -o StrictHostKeyChecking=no -i ${{ secrets.EC2_SSH_PRIVATE_KEY }} ubuntu@$MASTER_IP:/home/ubuntu/.kube/config ~/.kube/config
+
+  prometheus-grafana:
+    name: Set up Prometheus and Grafana
+    needs: setup-ec2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Prometheus and Grafana on Kubernetes
+        run: |
+          kubectl apply -f https://github.com/prometheus-operator/prometheus-operator/raw/main/bundle.yaml
+          kubectl apply -f https://raw.githubusercontent.com/grafana/helm-charts/main/charts/grafana/templates/deployment.yaml
+          kubectl apply -f https://raw.githubusercontent.com/grafana/helm-charts/main/charts/grafana/templates/service.yaml
+
+      - name: Expose Grafana and Prometheus
+        run: |
+          kubectl expose deployment prometheus-operator --type=LoadBalancer --name=prometheus
+          kubectl expose deployment grafana --type=LoadBalancer --name=grafana
+
+  deploy:
+    name: Deploy Application to Kubernetes
+    needs: [setup-ec2, prometheus-grafana]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s-specifications/
