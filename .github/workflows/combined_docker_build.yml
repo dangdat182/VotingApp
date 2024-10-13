@@ -107,10 +107,13 @@ jobs:
     needs: setup-aws-cli
     runs-on: ubuntu-latest
     steps:
+      - name: Verify IAM Permissions
+        run: aws sts get-caller-identity
+
       - name: Create VPC
         id: create-vpc
         run: |
-          VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output text --query 'Vpc.VpcId')
+          VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output text --query 'Vpc.VpcId' --debug)
           echo "Created VPC with ID $VPC_ID"
           echo "::set-output name=vpc_id::$VPC_ID"
 
