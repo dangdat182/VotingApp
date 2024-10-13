@@ -110,7 +110,7 @@ jobs:
       - name: Create VPC
         id: create-vpc
         run: |
-          VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --region us-east-1 --output text --query 'Vpc.VpcId')
+          VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output text --query 'Vpc.VpcId')
           echo "Created VPC with ID $VPC_ID"
           echo "::set-output name=vpc_id::$VPC_ID"
 
