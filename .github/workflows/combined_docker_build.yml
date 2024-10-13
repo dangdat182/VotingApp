@@ -108,7 +108,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Verify IAM Permissions
-        run: aws sts get-caller-identity
+        run: aws sts get-caller-identity --debug
 
       - name: Create VPC
         id: create-vpc
