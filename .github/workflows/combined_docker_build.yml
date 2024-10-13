@@ -84,12 +84,18 @@ jobs:
     name: Set up AWS CLI
     runs-on: ubuntu-latest
     steps:
+      - name: Remove existing AWS CLI
+        run: |
+          sudo rm -rf /usr/local/aws-cli
+          sudo rm -rf /usr/local/bin/aws
+
       - name: Install AWS CLI
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
-          sudo ./aws/install
+          sudo ./aws/install --update
           aws --version
+
       - name: Configure AWS CLI
         run: |
           aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -98,6 +104,7 @@ jobs:
 
   setup-vpc:
     name: Set up VPC, Subnets, and Security Group
+    needs: setup-aws-cli
     runs-on: ubuntu-latest
     steps:
       - name: Create VPC
