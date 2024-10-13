@@ -102,17 +102,17 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws configure set default.region us-east-1
           
-      - name: Verify AWS CLI Configuration
-        run: |
-          aws configure list
+      # - name: Verify AWS CLI Configuration
+      #   run: |
+      #     aws configure list
 
-      - name: Test AWS CLI Configuration
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-1
-        run: |
-          aws sts get-caller-identity --debug
+      # - name: Test AWS CLI Configuration
+      #   env:
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     AWS_DEFAULT_REGION: us-east-1
+      #   run: |
+      #     aws sts get-caller-identity --debug
 
   setup-vpc:
     name: Set up VPC, Subnets, and Security Group
