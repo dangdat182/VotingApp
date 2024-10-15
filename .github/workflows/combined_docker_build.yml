@@ -210,7 +210,7 @@ jobs:
           SECURITY_GROUP_ID=${{ steps.setup-vpc.outputs.security_group_id }}
 
           aws ec2 run-instances \
-            --image-id ami-0866a3c8686eaeeba \
+            --image-id ami-06b21ccaeff8cd686 \
             --count 2 \
             --instance-type t2.micro \
             --key-name test \
