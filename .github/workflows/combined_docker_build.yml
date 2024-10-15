@@ -126,7 +126,7 @@ jobs:
           aws eks create-cluster \
             --name $CLUSTER_NAME \
             --role-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/EKS-Cluster-Role \
-            --resources-vpc-config subnetIds=subnet-xxxxx,securityGroupIds=sg-xxxxx \
+            --resources-vpc-config subnetIds=subnet-05bf8076267cf72fa,securityGroupIds=sg-00282bad4fa5606ae \
             --kubernetes-version "1.21" \
             --region us-east-1
 
