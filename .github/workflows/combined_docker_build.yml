@@ -192,5 +192,5 @@ jobs:
 
     - name: Deploy to Kubernetes
       run: |
-        kubectl apply -f k8s-specifications/
+        minikube kubectl apply -f k8s-specifications/
 
