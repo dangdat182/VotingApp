@@ -182,15 +182,16 @@ jobs:
         minikube kubectl -- get pod
         sudo snap install kubectl --classic
 
-    - name: Set up KUBECONFIG for Minikube
-      run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.MINIKUBE_KUBECONFIG }}" | base64 --decode > ~/.kube/config
-        chmod 600 ~/.kube/config
+    # - name: Set up KUBECONFIG for Minikube
+    #   run: |
+    #     mkdir -p ~/.kube
+    #     echo "${{ secrets.MINIKUBE_KUBECONFIG }}" | base64 --decode > ~/.kube/config
+    #     chmod 600 ~/.kube/config
 
     
 
     - name: Deploy to Kubernetes
       run: |
+        cd /home/dexlo/VotingApp
         minikube kubectl apply -f k8s-specifications/
 
