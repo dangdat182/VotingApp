@@ -193,5 +193,5 @@ jobs:
     - name: Deploy to Kubernetes
       run: |
         cd /home/dexlo/VotingApp
-        minikube kubectl apply -f k8s-specifications/
+        minikube kubectl -- apply -f k8s-specifications/
 
