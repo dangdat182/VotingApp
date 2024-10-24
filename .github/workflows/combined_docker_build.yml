@@ -185,7 +185,7 @@ jobs:
     - name: Set up KUBECONFIG for Minikube
       run: |
         mkdir -p ~/.kube
-        echo "${{ secrets.MINIKUBE_KUBECONFIG }}" > ~/.kube/config
+        echo "${{ secrets.MINIKUBE_KUBECONFIG }}" | base64 --decode > ~/.kube/config
         chmod 600 ~/.kube/config
 
     
