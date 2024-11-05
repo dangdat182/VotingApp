@@ -119,7 +119,7 @@ jobs:
     needs: install-AWSCLI-kubectl-Terraform
     steps:
       - name: Initialize Terraform
-        run: terraform init -upgrade
+        run: terraform init
       
       - name: Plan Terraform
         run: terraform plan -out=terraform.plan
