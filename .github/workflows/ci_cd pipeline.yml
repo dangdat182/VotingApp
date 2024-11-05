@@ -114,23 +114,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
   
-  init-deploy-eks:
-    runs-on: ubuntu-latest
-    needs: install-AWSCLI-kubectl-Terraform
-    steps:
       - name: Initialize Terraform
-        working-directory: .
         run: terraform init -upgrade
       
       - name: Plan Terraform
-        working-directory: .
         run: terraform plan -out=terraform.plan
 
       - name: Apply Terraform (only if changes are detected)
-        working-directory: .
         #if: ${{ steps.plan.outputs.changes == 'true' }}
         run: terraform apply terraform.plan
-        
+
       - name: Update kubeconfig for EKS
         run: aws eks update-kubeconfig --name education-eks 
 
