@@ -118,12 +118,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize Terraform
+        working-directory: ./Terraform
         run: terraform -chdir=terraform/ init -upgrade
       
       - name: Plan Terraform
+        working-directory: ./Terraform
         run: terraform -chdir=terraform/ plan -out=terraform.plan
 
       - name: Apply Terraform (only if changes are detected)
+        working-directory: ./Terraform
         #if: ${{ steps.plan.outputs.changes == 'true' }}
         run: terraform -chdir=terraform/ apply terraform.plan
       
