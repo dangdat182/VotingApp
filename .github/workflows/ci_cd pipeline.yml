@@ -119,12 +119,15 @@ jobs:
     needs: install-AWSCLI-kubectl-Terraform
     steps:
       - name: Initialize Terraform
-        run: terraform init
+        working-directory: .
+        run: terraform init -upgrade
       
       - name: Plan Terraform
+        working-directory: .
         run: terraform plan -out=terraform.plan
 
       - name: Apply Terraform (only if changes are detected)
+        working-directory: .
         #if: ${{ steps.plan.outputs.changes == 'true' }}
         run: terraform apply terraform.plan
       
