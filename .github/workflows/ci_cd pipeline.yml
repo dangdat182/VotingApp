@@ -118,15 +118,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize Terraform
-        working-directory: ./VotingApp/Terraform
+        working-directory: VotingApp/Terraform
         run: terraform init -upgrade
       
       - name: Plan Terraform
-        working-directory: ./VotingApp/Terraform
+        working-directory: VotingApp/Terraform
         run: terraform plan -out=terraform.plan
 
       - name: Apply Terraform (only if changes are detected)
-        working-directory: ./VotingApp/Terraform
+        working-directory: VotingApp/Terraform
         #if: ${{ steps.plan.outputs.changes == 'true' }}
         run: terraform apply terraform.plan
       
