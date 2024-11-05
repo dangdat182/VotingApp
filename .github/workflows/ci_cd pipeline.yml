@@ -130,7 +130,7 @@ jobs:
         working-directory: .
         #if: ${{ steps.plan.outputs.changes == 'true' }}
         run: terraform apply terraform.plan
-      
+        
       - name: Update kubeconfig for EKS
         run: aws eks update-kubeconfig --name education-eks 
 
