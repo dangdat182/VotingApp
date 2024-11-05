@@ -1,0 +1,142 @@
+name: Build a CI/CD pipeline to deploy a microservices app
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'test'
+  pull_request:
+    branches:
+      - 'main'
+      - 'test'
+
+jobs:
+  build-push-result-image:
+    name: Build and Push Result Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Result image
+        run: |
+          docker build -t dexlo/result:latest ./result
+          docker push dexlo/result:latest
+
+  build-push-vote-image:
+    name: Build and Push Vote Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Vote image
+        run: |
+          docker build -t dexlo/vote:latest ./vote
+          docker push dexlo/vote:latest
+
+  build-push-worker-image:
+    name: Build and Push Worker Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Worker image
+        run: |
+          docker build -t dexlo/worker:latest ./worker
+          docker push dexlo/worker:latest
+
+  connect-scan-sonarqube:
+    name: SonarQube Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 17 for SonarQube
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+
+      - name: Install SonarScanner
+        run: npm install -g sonar-scanner
+
+      - name: Run SonarScanner
+        run: |
+          sonar-scanner \
+          -Dsonar.projectKey=dangdat182_VotingApp \
+          -Dsonar.organization=dangdat182 \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+  
+  install-AWSCLI-kubectl-Terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+    
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          
+      - name: Install Terraform
+        run: |
+          curl -Lo terraform.zip https://releases.hashicorp.com/terraform/1.5.6/terraform_1.5.6_linux_amd64.zip
+          unzip terraform.zip
+          sudo mv terraform /usr/local/bin/
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+  
+  init-deploy-eks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Initialize Terraform
+        run: terraform -chdir=Terraform init -upgrade
+      
+      - name: Plan Terraform
+        run: terraform -chdir=Terraform plan -out=terraform.plan
+
+      - name: Apply Terraform (only if changes are detected)
+        #if: ${{ steps.plan.outputs.changes == 'true' }}
+        run: terraform -chdir=Terraform apply terraform.plan
+      
+      - name: Update kubeconfig for EKS
+        run: aws eks update-kubeconfig --name education-eks 
+
+      - name: Verify EKS Nodes
+        run: kubectl get nodes -o custom-columns=Name:.metadata.name,nCPU:.status.capacity.cpu,Memory:.status.capacity.memory
+
+      - name: Apply Kubernetes Configurations
+        run: |
+          kubectl apply -f k8s-specifications/
+          sleep 60
+          kubectl get all
+
+
