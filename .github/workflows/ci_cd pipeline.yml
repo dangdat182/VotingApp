@@ -118,14 +118,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize Terraform
-        run: terraform -chdir=Terraform init -upgrade
+        run: terraform -chdir=terraform/ init -upgrade
       
       - name: Plan Terraform
-        run: terraform -chdir=Terraform plan -out=terraform.plan
+        run: terraform -chdir=terraform/ plan -out=terraform.plan
 
       - name: Apply Terraform (only if changes are detected)
         #if: ${{ steps.plan.outputs.changes == 'true' }}
-        run: terraform -chdir=Terraform apply terraform.plan
+        run: terraform -chdir=terraform/ apply terraform.plan
       
       - name: Update kubeconfig for EKS
         run: aws eks update-kubeconfig --name education-eks 
