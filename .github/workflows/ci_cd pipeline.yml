@@ -133,7 +133,7 @@ jobs:
 
       - name: Apply Terraform (only if changes are detected)
         working-directory: Terraform
-        if: ${{ steps.plan.outputs.changes == 'true' }}
+        #if: ${{ steps.plan.outputs.changes == 'true' }}
         run: terraform apply terraform.plan
 
       - name: Update kubeconfig for EKS
