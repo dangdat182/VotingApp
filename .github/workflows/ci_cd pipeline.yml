@@ -148,6 +148,6 @@ jobs:
           kubectl apply -f k8s-specifications/
           sleep 60
           kubectl get all
-##Hel
+##Hello
 
 
