@@ -3,6 +3,8 @@
 
 provider "aws" {
   region = var.region
+  skip_credentials_validation = true
+  skip_get_ec2_platforms      = true
 }
 
 # Filter out local zones, which are not currently supported 
