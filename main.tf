@@ -15,7 +15,7 @@ data "aws_availability_zones" "available" {
 }
 
 locals {
-  cluster_name = "education-eks"
+  cluster_name = "group_19"
 }
 
 resource "random_string" "suffix" {
