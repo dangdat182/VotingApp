@@ -130,7 +130,7 @@ jobs:
       
       - name: Plan Terraform
         working-directory: .
-        run: terraform plan -out=terraform.plan
+        run: TF_LOG=DEBUG terraform plan -out=terraform.plan
 
       - name: Apply Terraform (only if changes are detected)
         working-directory: .
