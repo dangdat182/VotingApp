@@ -10,6 +10,10 @@ on:
       - 'main'
       - 'test'
 
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
 jobs:
   build-push-result-image:
     name: Build and Push Result Docker Image
@@ -134,9 +138,6 @@ jobs:
         working-directory: ./Terraform
       
       - name: Plan Terraform
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         working-directory: ./Terraform
         run: terraform plan
 
