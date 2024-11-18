@@ -139,12 +139,12 @@ jobs:
       
       - name: Plan Terraform
         working-directory: ./Terraform
-        run: terraform plan -auto-approve
+        run: terraform plan 
 
       - name: Apply Terraform (only if changes are detected)
         working-directory: ./Terraform
         #if: ${{ steps.plan.outputs.changes == 'true' }}
-        run: terraform apply
+        run: terraform apply -auto-approve
 
       - name: Update kubeconfig for EKS
         run: aws eks update-kubeconfig --name education-eks 
