@@ -3,6 +3,7 @@
 
 provider "aws" {
   region = var.region
+  skip_credentials_validation = true
 }
 
 # Filter out local zones, which are not currently supported 
@@ -15,7 +16,7 @@ data "aws_availability_zones" "available" {
 }
 
 locals {
-  cluster_name = "education-eks"
+  cluster_name = "group_19"
 }
 
 resource "random_string" "suffix" {
