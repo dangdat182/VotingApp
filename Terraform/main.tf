@@ -1,9 +1,18 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "~> 5.11"
+    }
+  }
+  required_version = ">= 1.3.0"
+}
+
 provider "aws" {
-  region = var.region
-  skip_credentials_validation = true
+  region = "us-east-1"
 }
 
 # Filter out local zones, which are not currently supported 

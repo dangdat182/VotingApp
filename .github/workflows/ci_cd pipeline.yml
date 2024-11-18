@@ -124,17 +124,22 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Initialize Terraform
-        working-directory: Terraform
+        working-directory: ./Terraform
         run: terraform init -upgrade
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
+        working-directory: ./Terraform
       
       - name: Plan Terraform
-        working-directory: Terraform
-        run: terraform plan -out=terraform.plan
+        working-directory: ./Terraform
+        run: terraform plan
 
       - name: Apply Terraform (only if changes are detected)
-        working-directory: Terraform
+        working-directory: ./Terraform
         #if: ${{ steps.plan.outputs.changes == 'true' }}
-        run: terraform apply terraform.plan
+        run: terraform apply
 
       - name: Update kubeconfig for EKS
         run: aws eks update-kubeconfig --name education-eks 
