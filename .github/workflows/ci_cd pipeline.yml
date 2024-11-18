@@ -139,7 +139,7 @@ jobs:
       
       - name: Plan Terraform
         working-directory: ./Terraform
-        run: terraform plan
+        run: terraform plan -auto-approve
 
       - name: Apply Terraform (only if changes are detected)
         working-directory: ./Terraform
