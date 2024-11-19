@@ -140,13 +140,13 @@ jobs:
       
       - name: Plan Terraform
         working-directory: ./Terraform
-        run: terraform plan -out=tfplan
+        run: terraform plan
 
       - name: Apply Terraform (only if changes are detected)
         working-directory: ./Terraform
         #if: ${{ steps.plan.outputs.changes == 'true' }}
-        run: terraform apply -auto-approve tfplan
-        if: steps.plan.outputs.changes == 'true'
+        run: terraform apply -auto-approve 
+        
 
       - name: Update kubeconfig for EKS
         run: aws eks --region us-east-1 update-kubeconfig --name Group19-EKS 
