@@ -13,6 +13,7 @@ on:
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: "us-east-1" 
 
 jobs:
   build-push-result-image:
@@ -139,15 +140,16 @@ jobs:
       
       - name: Plan Terraform
         working-directory: ./Terraform
-        run: terraform plan 
+        run: terraform plan -out=tfplan
 
       - name: Apply Terraform (only if changes are detected)
         working-directory: ./Terraform
         #if: ${{ steps.plan.outputs.changes == 'true' }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan
+        if: steps.plan.outputs.changes == 'true'
 
       - name: Update kubeconfig for EKS
-        run: aws eks update-kubeconfig --name Group19-EKS 
+        run: aws eks --region us-east-1 update-kubeconfig --name Group19-EKS 
 
       - name: Verify EKS Nodes
         run: kubectl get nodes -o custom-columns=Name:.metadata.name,nCPU:.status.capacity.cpu,Memory:.status.capacity.memory
