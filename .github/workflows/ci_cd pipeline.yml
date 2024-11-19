@@ -89,6 +89,7 @@ jobs:
   Install-AWSCLI-kubectl-Terraform:
     name: Install-AWSCLI-kubectl-Terraform
     runs-on: ubuntu-latest
+    needs: [Connect-scan-sonarqube, build-push-result-image, build-push-vote-image, build-push-worker-image]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
@@ -140,15 +141,18 @@ jobs:
       
       - name: Plan Terraform
         working-directory: ./Terraform
-        run: terraform plan
+        run: |
+          terraform plan -out=tfplan
+          terraform show -json tfplan | jq .resource_changes | grep -q . && echo "true" || echo "false"
+        continue-on-error: true
 
       - name: Apply Terraform (only if changes are detected)
         working-directory: ./Terraform
-        #if: ${{ steps.plan.outputs.changes == 'true' }}
         run: |
           aws kms delete-alias --alias-name alias/eks/Group19-EKS || echo "Alias does not exist or already deleted"
           aws logs delete-log-group --log-group-name /aws/eks/Group19-EKS/cluster || echo "Log group does not exist or already deleted"
           terraform apply -auto-approve 
+        if: ${{steps.plan.outputs.changes == 'true'}}
         
 
       - name: Update kubeconfig for EKS
