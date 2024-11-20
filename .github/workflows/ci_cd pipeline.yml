@@ -185,7 +185,9 @@ jobs:
 
       # - name: Create a Prometheus namespace
       #   run: kubectl create namespace prometheus
-
+      - name: Update kubeconfig for EKS
+        run: aws eks --region us-east-1 update-kubeconfig --name Group19-EKS
+        
       - name: Add Prometheus Helm repo
         run: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 
