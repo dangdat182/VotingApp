@@ -144,9 +144,9 @@ jobs:
         run: |
           terraform plan -out=tfplan
           if terraform show -json tfplan | jq .resource_changes | grep -q .; then
-            echo "::set-output name=changes::true"
+            echo "changes=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=changes::false"
+            echo "changes=false" >> $GITHUB_OUTPUT
           fi
         continue-on-error: true
 
