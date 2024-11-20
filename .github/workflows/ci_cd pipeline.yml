@@ -143,16 +143,17 @@ jobs:
         working-directory: ./Terraform
         run: |
           terraform plan -out=tfplan
-          if terraform show -json tfplan | jq .resource_changes | grep -q then
-            echo "changes=true" >> $GITHUB_ENV
+          if terraform show -json tfplan | jq .resource_changes | grep -q .; then
+            echo "::set-output name=changes::true"
           else
-            echo "changes=false" >> $GITHUB_ENV
+            echo "::set-output name=changes::false"
           fi
+        continue-on-error: true
 
       - name: Apply Terraform (only if changes are detected)
         working-directory: ./Terraform
         run: |
-          if [ "${{ env.changes }}" == "true" ] || [ ! -f "terraform.tfstate" ]; then
+          if [ "${{ steps.plan.outputs.changes }}" == "true" ] || [ ! -f "terraform.tfstate" ]; then
             aws kms delete-alias --alias-name alias/eks/Group19-EKS || echo "Alias does not exist or already deleted"
             aws logs delete-log-group --log-group-name /aws/eks/Group19-EKS/cluster || echo "Log group does not exist or already deleted"
             echo "Applying Terraform changes."
