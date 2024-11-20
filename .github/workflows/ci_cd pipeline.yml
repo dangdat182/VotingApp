@@ -152,7 +152,7 @@ jobs:
           aws kms delete-alias --alias-name alias/eks/Group19-EKS || echo "Alias does not exist or already deleted"
           aws logs delete-log-group --log-group-name /aws/eks/Group19-EKS/cluster || echo "Log group does not exist or already deleted"
           terraform apply -auto-approve 
-        #if: ${{steps.plan.outputs.changes == 'true'}}
+        if: ${{steps.plan.outputs.changes == 'true'}}
         
 
       - name: Update kubeconfig for EKS
@@ -163,6 +163,8 @@ jobs:
 
       - name: Apply Kubernetes Configurations
         run: |
+          kubectl create namespace prometheus
+          kubectl create namespace grafana
           kubectl apply -f k8s-specifications/
           sleep 60
           kubectl get all
@@ -181,8 +183,8 @@ jobs:
           sudo mv /tmp/eksctl /usr/local/bin/
           eksctl version      
 
-      - name: Create a Prometheus namespace
-        run: kubectl create namespace prometheus
+      # - name: Create a Prometheus namespace
+      #   run: kubectl create namespace prometheus
 
       - name: Add Prometheus Helm repo
         run: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -238,9 +240,9 @@ jobs:
         run: |
           helm repo add grafana https://grafana.github.io/helm-charts
 
-      - name: Create a Grafana namespace
-        run: |
-          kubectl create namespace grafana
+      # - name: Create a Grafana namespace
+      #   run: |
+      #     kubectl create namespace grafana
 
       - name: Deploy Grafana using Helm
         run: |
