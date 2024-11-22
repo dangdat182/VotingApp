@@ -209,6 +209,9 @@ jobs:
       - name: Verify the deployment
         run: |
           kubectl get pods -n prometheus
+          sleep 120
+          kubectl get all
+
       
       - name: Create an IAM OIDC identity provider
         run: |
@@ -225,13 +228,13 @@ jobs:
               --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
               --approve
 
-      - name: Managing the Amazon EBS CSI driver as an Amazon EKS add-on
-        run: |
-          aws eks describe-addon-versions --addon-name aws-ebs-csi-driver
-          eksctl create addon --name aws-ebs-csi-driver --cluster Group19-EKS --service-account-role-arn arn:aws:iam::905418472948:role/AmazonEKS_EBS_CSI_DriverRole --force
-          eksctl get addon --name aws-ebs-csi-driver --cluster Group19-EKS
-          eksctl update addon --name aws-ebs-csi-driver --version v1.11.4-eksbuild.1 --cluster Group19-EKS \
-          --service-account-role-arn arn:aws:iam::905418472948:role/AmazonEKS_EBS_CSI_DriverRole --force
+      # - name: Managing the Amazon EBS CSI driver as an Amazon EKS add-on
+      #   run: |
+      #     aws eks describe-addon-versions --addon-name aws-ebs-csi-driver
+      #     eksctl create addon --name aws-ebs-csi-driver --cluster Group19-EKS --service-account-role-arn arn:aws:iam::905418472948:role/AmazonEKS_EBS_CSI_DriverRole --force
+      #     eksctl get addon --name aws-ebs-csi-driver --cluster Group19-EKS
+      #     eksctl update addon --name aws-ebs-csi-driver --version v1.37.0-eksbuild.1 --cluster Group19-EKS \
+      #     --service-account-role-arn arn:aws:iam::905418472948:role/AmazonEKS_EBS_CSI_DriverRole --force
 
       - name: Check the pod status
         run: |
@@ -259,9 +262,9 @@ jobs:
             --namespace grafana \
             --set persistence.storageClassName="gp2" \
             --set persistence.enabled=true \
-            --set adminPassword='EKS!sAWSome' \
+            --set adminPassword='admin' \
             --values grafana.yaml \
-            --set service.type=NodePort
+            --set service.type=LoadBalancer
 
       - name: Verify the deployment
         run: |
@@ -270,6 +273,8 @@ jobs:
       - name: Check grafana service
         run: |
           kubectl get services -n grafana
+          sleep 150
+          kubectl get all
       
       
 
