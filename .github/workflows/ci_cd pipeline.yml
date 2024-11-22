@@ -241,8 +241,9 @@ jobs:
           kubectl get pods -n prometheus
 
       - name: Apply the service file
+        working-directory: .
         run: |
-          kubectl apply -f prometheus-deployemnt.yml
+          kubectl apply -f prometheus-deployment.yml
 
       - name: Check the service
         run: |
