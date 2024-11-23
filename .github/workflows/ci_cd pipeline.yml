@@ -133,16 +133,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
-      #- name: Initialize Terraform
-      #  working-directory: ./Terraform
-      # run: terraform init -upgrade
-
-      - name: Initialize Terraform with S3 Backend
+      - name: Initialize Terraform
         working-directory: ./Terraform
-        run: terraform init -backend-config="bucket=terraform-state-bucket-12345" \
-                            -backend-config="key=terraform/state/terraform.tfstate" \
-                            -backend-config="region=${{ env.AWS_DEFAULT_REGION }}" \
-                            -backend-config="dynamodb_table=terraform-lock-table"    
+        run: terraform init -upgrade  
 
       - name: Terraform Validate
         id: validate
