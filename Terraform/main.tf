@@ -112,12 +112,3 @@ module "irsa-ebs-csi" {
   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
 }
 
-terraform {
-  backend "s3" {
-    bucket         = "terraform-state-bucket-12345" # Tên S3 bucket đã tạo
-    key            = "terraform/state/terraform.tfstate" # Đường dẫn lưu file trạng thái
-    region         = "us-east-1" # Vùng của bucket
-    dynamodb_table = "terraform-lock-table" # Tên bảng DynamoDB để khóa trạng thái
-    encrypt        = true # Mã hóa trạng thái Terraform
-  }
-}
