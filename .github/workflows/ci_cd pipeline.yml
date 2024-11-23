@@ -134,8 +134,13 @@ jobs:
             echo "S3 bucket already exists."
           else
             echo "Creating S3 bucket."
-            aws s3api create-bucket --bucket terraform-state-bucket-12345 --region ${{ env.AWS_DEFAULT_REGION }} \
-              --create-bucket-configuration LocationConstraint=${{ env.AWS_DEFAULT_REGION }}
+            if [ "${{ env.AWS_DEFAULT_REGION }}" = "us-east-1" ]; then
+              aws s3api create-bucket --bucket terraform-state-bucket-12345 --region us-east-1
+            else
+              aws s3api create-bucket --bucket terraform-state-bucket-12345 --region "${{ env.AWS_DEFAULT_REGION }}" \
+                --create-bucket-configuration LocationConstraint="${{ env.AWS_DEFAULT_REGION }}"
+            fi
+            echo "Enabling versioning on the S3 bucket."
             aws s3api put-bucket-versioning --bucket terraform-state-bucket-12345 --versioning-configuration Status=Enabled
           fi
 
