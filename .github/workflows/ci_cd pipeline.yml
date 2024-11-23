@@ -143,6 +143,7 @@ jobs:
         working-directory: ./Terraform
       
       - name: Plan Terraform
+        id: plan
         working-directory: ./Terraform
         run: |
           terraform plan -out=tfplan
@@ -158,7 +159,7 @@ jobs:
         run: |
           aws kms delete-alias --alias-name alias/eks/Group19-EKS || echo "Alias does not exist or already deleted"
           aws logs delete-log-group --log-group-name /aws/eks/Group19-EKS/cluster || echo "Log group does not exist or already deleted"
-          if [ "${{ steps.plan.outputs.changes }}" == "true" ] || [ ! -f "terraform.tfstate" ]; then
+          if [ "${{ env.changes }}" == "true" ] || [ ! -f "terraform.tfstate" ]; then
             echo "Applying Terraform changes."
             terraform apply -auto-approve  
           else
@@ -279,7 +280,7 @@ jobs:
           kubectl get services -n grafana
           kubectl get svc -n prometheus
           kubectl get all
-     
+      
       
 
 
