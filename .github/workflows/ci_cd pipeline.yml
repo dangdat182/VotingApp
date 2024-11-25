@@ -276,7 +276,7 @@ jobs:
 
       - name: Check all service
         run: |
-          sleep 300
+          sleep 250
           kubectl get services -n grafana
           kubectl get svc -n prometheus
           kubectl get all
