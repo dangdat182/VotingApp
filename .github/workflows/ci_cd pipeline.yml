@@ -1,0 +1,284 @@
+name: Build a CI/CD pipeline to deploy a microservices app
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'test'
+  pull_request:
+    branches:
+      - 'main'
+      - 'test'
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: "us-east-1" 
+
+jobs:
+  Connect-scan-sonarqube:
+    name: SonarQube Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 17 for SonarQube
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+
+      - name: Install SonarScanner
+        run: npm install -g sonar-scanner
+
+      - name: Run SonarScanner
+        run: |
+          sonar-scanner \
+          -Dsonar.projectKey=dangdat182_VotingApp \
+          -Dsonar.organization=dangdat182 \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+  build-push-result-image:
+    name: Build and Push Result Docker Image
+    runs-on: ubuntu-latest
+    needs: Connect-scan-sonarqube
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Result image
+        run: |
+          docker build -t dexlo/result:latest ./result
+          docker push dexlo/result:latest
+
+  build-push-vote-image:
+    name: Build and Push Vote Docker Image
+    runs-on: ubuntu-latest
+    needs: Connect-scan-sonarqube
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Vote image
+        run: |
+          docker build -t dexlo/vote:latest ./vote
+          docker push dexlo/vote:latest
+
+  build-push-worker-image:
+    name: Build and Push Worker Docker Image
+    runs-on: ubuntu-latest
+    needs: Connect-scan-sonarqube
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push Worker image
+        run: |
+          docker build -t dexlo/worker:latest ./worker
+          docker push dexlo/worker:latest
+
+  Install-AWSCLI-kubectl-Terraform:
+    name: Install-AWSCLI-kubectl-Terraform
+    runs-on: ubuntu-latest
+    needs: [Connect-scan-sonarqube, build-push-result-image, build-push-vote-image, build-push-worker-image]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+    
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          
+      - name: Install Terraform
+        run: |
+          curl -Lo terraform.zip https://releases.hashicorp.com/terraform/1.5.6/terraform_1.5.6_linux_amd64.zip
+          unzip terraform.zip
+          sudo mv terraform /usr/local/bin/
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+    #  - name: Configure AWS Credentials
+    #   uses: aws-actions/configure-aws-credentials@v1
+    #    with:
+    #      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #     aws-region: us-east-1
+    
+
+  Init-deploy-eks:
+    name: Init-deploy-eks
+    runs-on: ubuntu-latest
+    needs: Install-AWSCLI-kubectl-Terraform
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Initialize Terraform
+        working-directory: ./Terraform
+        run: terraform init -upgrade  
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
+        working-directory: ./Terraform
+      
+      - name: Plan Terraform
+        id: plan
+        working-directory: ./Terraform
+        run: |
+          terraform plan -out=tfplan
+          if terraform show -json tfplan | jq .resource_changes | grep -q .; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Apply Terraform (only if changes are detected)
+        working-directory: ./Terraform
+        run: |
+          aws kms delete-alias --alias-name alias/eks/Group19-EKS || echo "Alias does not exist or already deleted"
+          aws logs delete-log-group --log-group-name /aws/eks/Group19-EKS/cluster || echo "Log group does not exist or already deleted"
+          if [ "${{ env.changes }}" == "true" ] || [ ! -f "terraform.tfstate" ]; then
+            echo "Applying Terraform changes."
+            terraform apply -auto-approve  
+          else
+            echo "No changes detected. Skipping Terraform apply."
+          fi       
+
+      - name: Update kubeconfig for EKS
+        run: aws eks --region us-east-1 update-kubeconfig --name Group19-EKS 
+
+      - name: Verify EKS Nodes
+        run: kubectl get nodes -o custom-columns=Name:.metadata.name,nCPU:.status.capacity.cpu,Memory:.status.capacity.memory
+
+      - name: Apply Kubernetes Configurations
+        run: |
+          kubectl create namespace prometheus
+          kubectl create namespace grafana
+          kubectl apply -f k8s-specifications/
+          sleep 60
+          kubectl get all
+
+  Deploy-Prometheus-Grafana:
+    name: Deploy Prometheus and Grafana
+    runs-on: ubuntu-latest
+    needs: Init-deploy-eks
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install eksctl
+        run: |
+          curl --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_linux_amd64.tar.gz" | tar xz -C /tmp
+          sudo mv /tmp/eksctl /usr/local/bin/
+          eksctl version      
+
+      # - name: Create a Prometheus namespace
+      #   run: kubectl create namespace prometheus
+      - name: Update kubeconfig for EKS
+        run: aws eks --region us-east-1 update-kubeconfig --name Group19-EKS
+
+      - name: Add Prometheus Helm repo
+        run: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+      - name: Deploy Prometheus
+        run: |
+          helm upgrade -i prometheus prometheus-community/prometheus \
+            --namespace prometheus \
+            --create-namespace \
+            --set alertmanager.persistentVolume.storageClass="gp2" \
+            --set server.persistentVolume.storageClass="gp2"
+
+      - name: Verify the deployment
+        run: |
+          kubectl get pods -n prometheus
+          sleep 120
+          kubectl get all
+
+      - name: Create an IAM OIDC identity provider
+        run: |
+          eksctl utils associate-iam-oidc-provider --cluster Group19-EKS --approve
+
+      - name: Create Amazon EBS CSI plugin IAM role with eksctl
+        run: |
+          eksctl create iamserviceaccount \
+              --name ebs-csi-controller-sa \
+              --namespace kube-system \
+              --cluster Group19-EKS \
+              --role-name AmazonEKS_EBS_CSI_DriverRole \
+              --role-only \
+              --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
+              --approve
+
+      # - name: Managing the Amazon EBS CSI driver as an Amazon EKS add-on
+      #   run: |
+      #     aws eks describe-addon-versions --addon-name aws-ebs-csi-driver
+      #     eksctl create addon --name aws-ebs-csi-driver --cluster Group19-EKS --service-account-role-arn arn:aws:iam::905418472948:role/AmazonEKS_EBS_CSI_DriverRole --force
+      #     eksctl get addon --name aws-ebs-csi-driver --cluster Group19-EKS
+      #     eksctl update addon --name aws-ebs-csi-driver --version v1.37.0-eksbuild.1 --cluster Group19-EKS \
+      #     --service-account-role-arn arn:aws:iam::905418472948:role/AmazonEKS_EBS_CSI_DriverRole --force
+
+      - name: Check the pod status
+        run: |
+          kubectl get pods -n prometheus
+
+      - name: Apply the service file
+        working-directory: .
+        run: |
+          kubectl apply -f prometheus-deployment.yml
+
+      - name: Check the service
+        run: |
+          kubectl get svc -n prometheus
+
+      - name: Deploy Grafana
+        run: |
+          helm repo add grafana https://grafana.github.io/helm-charts
+
+      # - name: Create a Grafana namespace
+      #   run: |
+      #     kubectl create namespace grafana
+
+      - name: Deploy Grafana using Helm
+        run: |
+          helm install grafana grafana/grafana \
+            --namespace grafana \
+            --set persistence.storageClassName="gp2" \
+            --set persistence.enabled=true \
+            --set adminPassword='admin' \
+            --values grafana.yaml \
+            --set service.type=LoadBalancer
+
+      - name: Verify the deployment
+        run: |
+          kubectl get pods -n grafana
+
+      - name: Check all service
+        run: |
+          sleep 250
+          kubectl get services -n grafana
+          kubectl get svc -n prometheus
+          kubectl get all
+      
+      
