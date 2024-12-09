@@ -87,11 +87,14 @@ jobs:
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           
       - name: Install Terraform
+        run: |
+          curl -Lo terraform.zip https://releases.hashicorp.com/terraform/1.5.6/terraform_1.5.6_linux_amd64.zip
+          unzip terraform.zip
+          sudo mv terraform /usr/local/bin/
+
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.6
-          terraform_wrapper: true
-          
+
   Init-deploy-eks:
     name: Init-deploy-eks
     runs-on: ubuntu-latest
