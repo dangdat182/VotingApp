@@ -75,21 +75,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
-      - name: Install Trivy
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.58.0-1-g775f954c3
+      - name: Scan Result image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'dexlo/result:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
 
-      - name: Scan Result Image
-        run: |
-          trivy image --exit-code 1 --severity HIGH,CRITICAL dexlo/result:latest || echo "Result image scan completed with vulnerabilities."
+      - name: Scan Vote image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'dexlo/vote:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
 
-      - name: Scan Vote Image
-        run: |
-          trivy image --exit-code 1 --severity HIGH,CRITICAL dexlo/vote:latest || echo "Vote image scan completed with vulnerabilities."
-
-      - name: Scan Worker Image
-        run: |
-          trivy image --exit-code 1 --severity HIGH,CRITICAL dexlo/worker:latest || echo "Worker image scan completed with vulnerabilities."
+      - name: Scan Worker image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'dexlo/worker:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
 
   Install-AWSCLI-kubectl-Terraform:
     name: Install-AWSCLI-kubectl-Terraform
