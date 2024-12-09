@@ -67,10 +67,34 @@ jobs:
           docker build -t dexlo/worker:latest ./worker
           docker push dexlo/worker:latest
 
+  Scan-docker-images:
+    name: Scan Docker Images with Trivy
+    runs-on: ubuntu-latest
+    needs: build-push-image
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.58.0-1-g775f954c3
+
+      - name: Scan Result Image
+        run: |
+          trivy image --exit-code 1 --severity HIGH,CRITICAL dexlo/result:latest || echo "Result image scan completed with vulnerabilities."
+
+      - name: Scan Vote Image
+        run: |
+          trivy image --exit-code 1 --severity HIGH,CRITICAL dexlo/vote:latest || echo "Vote image scan completed with vulnerabilities."
+
+      - name: Scan Worker Image
+        run: |
+          trivy image --exit-code 1 --severity HIGH,CRITICAL dexlo/worker:latest || echo "Worker image scan completed with vulnerabilities."
+
   Install-AWSCLI-kubectl-Terraform:
     name: Install-AWSCLI-kubectl-Terraform
     runs-on: ubuntu-latest
-    needs: build-push-image
+    needs: Scan-docker-images
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
