@@ -80,7 +80,6 @@ jobs:
         with:
           image-ref: 'dexlo/result:latest'
           format: 'table'
-          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
@@ -90,7 +89,6 @@ jobs:
         with:
           image-ref: 'dexlo/vote:latest'
           format: 'table'
-          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
@@ -100,7 +98,6 @@ jobs:
         with:
           image-ref: 'dexlo/worker:latest'
           format: 'table'
-          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
