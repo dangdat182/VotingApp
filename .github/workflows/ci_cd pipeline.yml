@@ -102,8 +102,8 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-  Install-AWSCLI-kubectl-Terraform:
-    name: Set up Terraform
+  Install-AWSCLI-kubectl:
+    name: Set up AWSCLI kuberctl
     runs-on: ubuntu-latest
     needs: Scan-docker-images
     steps:
@@ -121,6 +121,16 @@ jobs:
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           
+      
+
+  Terraform-Init-deploy-eks:
+    name: Setup Terraform, Init and deploy eks
+    runs-on: ubuntu-latest
+    needs: Install-AWSCLI-kubectl
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
       - name: Install Terraform
         run: |
           curl -Lo terraform.zip https://releases.hashicorp.com/terraform/1.10.2/terraform_1.10.2_linux_amd64.zip
@@ -131,14 +141,6 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-
-  Init-deploy-eks:
-    name: Init and deploy eks
-    runs-on: ubuntu-latest
-    needs: Install-AWSCLI-kubectl-Terraform
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
 
       - name: Initialize Terraform
         working-directory: ./Terraform
