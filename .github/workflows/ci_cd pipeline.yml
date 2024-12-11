@@ -192,7 +192,7 @@ jobs:
   Deploy-Prometheus-Grafana:
     name: Deploy Prometheus and Grafana
     runs-on: ubuntu-latest
-    needs: Init-deploy-eks
+    needs: Terraform-Init-deploy-eks
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
