@@ -123,7 +123,7 @@ jobs:
           
       - name: Install Terraform
         run: |
-          curl -Lo terraform.zip https://releases.hashicorp.com/terraform/1.5.6/terraform_1.5.6_linux_amd64.zip
+          curl -Lo terraform.zip https://releases.hashicorp.com/terraform/1.10.2/terraform_1.10.2_linux_amd64.zip
           unzip terraform.zip
           sudo mv terraform /usr/local/bin/
           sudo chmod +x /usr/local/bin/terraform
