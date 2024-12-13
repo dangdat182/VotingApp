@@ -153,9 +153,10 @@ jobs:
 
       - name: Apply Terraform
         working-directory: ./Terraform
-        run:
+        run: |
           aws kms delete-alias --alias-name alias/eks/Group19-EKS || echo "Alias does not exist or already deleted"
           aws logs delete-log-group --log-group-name /aws/eks/Group19-EKS/cluster || echo "Log group does not exist or already deleted"
+          terraform apply -auto-approve
           
       - name: Update kubeconfig for EKS
         run: aws eks --region us-east-1 update-kubeconfig --name Group19-EKS 
