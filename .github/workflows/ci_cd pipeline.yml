@@ -4,11 +4,10 @@ on:
   push:
     branches:
       - 'main'
-      - 'test'
-  pull_request:
-    branches:
-      - 'main'
-      - 'test'
+    paths:
+      - 'k8s-specifications/**'
+      - 'Terraform/**'
+      - '.github/workflows/ci_cd pipeline.yml'
 
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -121,8 +120,6 @@ jobs:
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           
-      
-
   Terraform-Init-deploy-eks:
     name: Setup Terraform, Init and deploy eks
     runs-on: ubuntu-latest
@@ -131,16 +128,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
-      - name: Install Terraform
-        run: |
-          curl -Lo terraform.zip https://releases.hashicorp.com/terraform/1.10.2/terraform_1.10.2_linux_amd64.zip
-          unzip terraform.zip
-          sudo mv terraform /usr/local/bin/
-          sudo chmod +x /usr/local/bin/terraform
-          terraform --version
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.2
+
+      - name: Verify Terraform Installation
+        run: terraform --version
 
       - name: Initialize Terraform
         working-directory: ./Terraform
@@ -154,27 +148,15 @@ jobs:
       - name: Plan Terraform
         id: plan
         working-directory: ./Terraform
-        run: |
+        run:
           terraform plan -out=tfplan
-          if terraform show -json tfplan | jq .resource_changes | grep -q .; then
-            echo "changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "changes=false" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
 
-      - name: Apply Terraform (only if changes are detected)
+      - name: Apply Terraform
         working-directory: ./Terraform
-        run: |
+        run:
           aws kms delete-alias --alias-name alias/eks/Group19-EKS || echo "Alias does not exist or already deleted"
           aws logs delete-log-group --log-group-name /aws/eks/Group19-EKS/cluster || echo "Log group does not exist or already deleted"
-          if [ "${{ env.changes }}" == "true" ] || [ ! -f "terraform.tfstate" ]; then
-            echo "Applying Terraform changes."
-            terraform apply -auto-approve  
-          else
-            echo "No changes detected. Skipping Terraform apply."
-          fi       
-
+          
       - name: Update kubeconfig for EKS
         run: aws eks --region us-east-1 update-kubeconfig --name Group19-EKS 
 
@@ -187,7 +169,6 @@ jobs:
           kubectl create namespace grafana
           kubectl apply -f k8s-specifications/
           sleep 60
-          kubectl get all
 
   Deploy-Prometheus-Grafana:
     name: Deploy Prometheus and Grafana
@@ -221,7 +202,6 @@ jobs:
         run: |
           kubectl get pods -n prometheus
           sleep 120
-          kubectl get all
 
       - name: Create an IAM OIDC identity provider
         run: |
