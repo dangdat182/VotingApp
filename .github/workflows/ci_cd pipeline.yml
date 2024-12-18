@@ -256,5 +256,5 @@ jobs:
           kubectl get services -n grafana
           kubectl get svc -n prometheus
           kubectl get all
-      
+##For demo      
       
