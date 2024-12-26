@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'test'
+      - 'main'
     paths:
       - 'k8s-specifications/**'
       - 'Terraform/**'
@@ -12,6 +13,8 @@ on:
   pull_request:
     branches: 
       - 'main'
+    types:
+      - closed
     paths:
       - 'k8s-specifications/**'
       - 'Terraform/**'
@@ -149,31 +152,31 @@ jobs:
           docker push dexlo/worker:latest
 
   
-  Install-AWSCLI-kubectl:
-    if: github.event_name == 'push' && contains(github.ref, 'test')
-    name: Set up AWSCLI kuberctl
-    runs-on: ubuntu-latest
-    needs: Push-image
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
+  # Install-AWSCLI-kubectl:
+  #   if: github.event_name == 'push' && contains(github.ref, 'test')
+  #   name: Set up AWSCLI kuberctl
+  #   runs-on: ubuntu-latest
+  #   needs: Push-image
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v2
     
-      - name: Install AWS CLI
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install --update
+  #     - name: Install AWS CLI
+  #       run: |
+  #         curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  #         unzip awscliv2.zip
+  #         sudo ./aws/install --update
 
-      - name: Install kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+  #     - name: Install kubectl
+  #       run: |
+  #         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+  #         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           
   Terraform-Init-deploy-eks:
-    if: github.event_name == 'pull_request' && contains(github.ref, 'main')
+    if: github.event_name == 'push' && contains(github.ref, 'main') || github.event_name == 'pull_request' && github.event.action == 'closed'
     name: Setup Terraform, Init and deploy eks
     runs-on: ubuntu-latest
-    needs: Install-AWSCLI-kubectl
+    needs: Push-image
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
@@ -222,7 +225,7 @@ jobs:
           sleep 60
 
   Deploy-Prometheus-Grafana:
-    if: github.event_name == 'pull_request' && contains(github.ref, 'main')
+    if: github.event_name == 'push' && contains(github.ref, 'main') || github.event_name == 'pull_request' && github.event.action == 'closed'
     name: Deploy Prometheus and Grafana
     runs-on: ubuntu-latest
     needs: Terraform-Init-deploy-eks
