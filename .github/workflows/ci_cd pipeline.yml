@@ -171,7 +171,7 @@ jobs:
   #         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           
   Terraform-Init-deploy-eks:
-    if: github.event_name == 'pull_request' && contains(github.ref, 'main')
+    if: github.event_name == 'push' && contains(github.ref, 'main') || github.event_name == 'pull_request' && contains(github.base_ref, 'main')
     name: Setup Terraform, Init and deploy eks
     runs-on: ubuntu-latest
     ##needs: Install-AWSCLI-kubectl
@@ -223,7 +223,7 @@ jobs:
           sleep 60
 
   Deploy-Prometheus-Grafana:
-    if: github.event_name == 'pull_request' && contains(github.ref, 'main')
+    if: github.event_name == 'push' && contains(github.ref, 'main') || github.event_name == 'pull_request' && contains(github.base_ref, 'main')
     name: Deploy Prometheus and Grafana
     runs-on: ubuntu-latest
     needs: Terraform-Init-deploy-eks
