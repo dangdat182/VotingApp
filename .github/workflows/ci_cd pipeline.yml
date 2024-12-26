@@ -41,7 +41,7 @@ jobs:
           -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
   Build-image:
-    name: Build Docker Image
+    name: Build Docker Images
     runs-on: ubuntu-latest
     needs: Connect-scan-sonarqube
     steps:
@@ -89,7 +89,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
   
   Push-image:
-    name: Build Docker Image
+    name: Push Docker Images
     runs-on: ubuntu:latest
     needs: Scan-docker-images
     steps:   
@@ -106,7 +106,6 @@ jobs:
           docker push dexlo/worker:latest
 
   
-
   Install-AWSCLI-kubectl:
     name: Set up AWSCLI kuberctl
     runs-on: ubuntu-latest
