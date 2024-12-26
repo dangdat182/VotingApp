@@ -3,11 +3,20 @@ name: Build a CI/CD pipeline to deploy a microservices app
 on:
   push:
     branches:
+      - 'test'
+    paths:
+      - 'k8s-specifications/**'
+      - 'Terraform/**'
+      - '.github/workflows/ci_cd pipeline.yml'
+
+  pull_request:
+    branches: 
       - 'main'
     paths:
       - 'k8s-specifications/**'
       - 'Terraform/**'
       - '.github/workflows/ci_cd pipeline.yml'
+
 
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -16,6 +25,7 @@ env:
 
 jobs:
   Connect-scan-sonarqube:
+    if: github.event_name == 'push' && contains(github.ref, 'test')
     name: SonarQube Code Analysis
     runs-on: ubuntu-latest
     steps:
@@ -41,6 +51,7 @@ jobs:
           -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
   Build-image:
+    if: github.event_name == 'push' && contains(github.ref, 'test')
     name: Build Docker Images
     runs-on: ubuntu-latest
     needs: Connect-scan-sonarqube
@@ -56,8 +67,24 @@ jobs:
           docker build -t dexlo/vote:latest ./vote
           docker build -t dexlo/worker:latest ./worker
           docker build -t dexlo/result:latest ./result
+        
+      - name: Save Docker images
+        run: |
+          docker save -o vote.tar "dexlo/vote:latest"
+          docker save -o worker.tar "dexlo/worker:latest"
+          docker save -o result.tar "dexlo/result:latest"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-images
+          path: |
+            vote.tar
+            worker.tar
+            result.tar
       
   Scan-docker-images:
+    if: github.event_name == 'push' && contains(github.ref, 'test')
     name: Scan Docker Images with Trivy
     runs-on: ubuntu-latest
     needs: Build-image
@@ -93,6 +120,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
   
   Push-image:
+    if: github.event_name == 'push' && contains(github.ref, 'test')
     name: Push Docker Images
     runs-on: ubuntu-latest
     needs: Scan-docker-images
@@ -103,6 +131,17 @@ jobs:
       - name: Login to Dockerhub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin  
 
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-images
+
+      - name: Load Docker images
+        run: |
+          docker load -i vote.tar
+          docker load -i worker.tar
+          docker load -i result.tar
+      
       - name: Push Docker images
         run: |
           docker push dexlo/vote:latest
@@ -111,6 +150,7 @@ jobs:
 
   
   Install-AWSCLI-kubectl:
+    if: github.event_name == 'push' && contains(github.ref, 'test')
     name: Set up AWSCLI kuberctl
     runs-on: ubuntu-latest
     needs: Push-image
@@ -130,6 +170,7 @@ jobs:
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           
   Terraform-Init-deploy-eks:
+    if: github.event_name == 'pull_request' && contains(github.ref, 'main')
     name: Setup Terraform, Init and deploy eks
     runs-on: ubuntu-latest
     needs: Install-AWSCLI-kubectl
@@ -181,6 +222,7 @@ jobs:
           sleep 60
 
   Deploy-Prometheus-Grafana:
+    if: github.event_name == 'pull_request' && contains(github.ref, 'main')
     name: Deploy Prometheus and Grafana
     runs-on: ubuntu-latest
     needs: Terraform-Init-deploy-eks
@@ -261,7 +303,7 @@ jobs:
 
       - name: Check all service
         run: |
-          sleep 250
+          sleep 200
           kubectl get services -n grafana
           kubectl get svc -n prometheus
           kubectl get all
