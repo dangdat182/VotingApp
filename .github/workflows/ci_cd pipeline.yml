@@ -181,6 +181,11 @@ jobs:
         with:
           terraform_version: 1.10.2
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
       - name: Verify Terraform Installation
         run: terraform --version
 
@@ -192,6 +197,13 @@ jobs:
         id: validate
         run: terraform validate
         working-directory: ./Terraform
+
+      - name: Run Checkov Scan
+        working-directory: ./Terraform
+        id: checkov
+        run: |
+          pip install checkov
+          checkov -d . --skip-path test/  
       
       - name: Plan Terraform
         id: plan
@@ -217,7 +229,6 @@ jobs:
           kubectl create namespace prometheus
           kubectl create namespace grafana
           kubectl apply -f k8s-specifications/
-          sleep 60
 
   Deploy-Prometheus-Grafana:
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
@@ -251,7 +262,6 @@ jobs:
       - name: Verify the deployment
         run: |
           kubectl get pods -n prometheus
-          sleep 120
 
       - name: Create an IAM OIDC identity provider
         run: |
