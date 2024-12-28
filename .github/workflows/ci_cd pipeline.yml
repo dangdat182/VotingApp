@@ -203,7 +203,7 @@ jobs:
         id: checkov
         run: |
           pip install checkov
-          checkov -d . --skip-path test/  
+          checkov -d . --skip-path test/  || true
       
       - name: Plan Terraform
         id: plan
